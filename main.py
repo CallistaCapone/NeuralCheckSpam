@@ -2,6 +2,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -114,16 +115,24 @@ def classify_message(model, message, vectorizer, translator, encoder):
     message_combined = message + ' ' + message_ru
     message_tfidf = vectorizer.transform([message_combined]).toarray()
     message_tensor = torch.tensor(message_tfidf, dtype=torch.float32)
+
     print("Классификация сообщения...")
+    model.eval()
     with torch.no_grad():
         output = model(message_tensor)
         _, predicted = torch.max(output, 1)
     label = encoder.inverse_transform(predicted.cpu().numpy())[0]
+    model.train()
     return label
+
 
 translator = Translator(to_lang="ru")
 while True:
     user_message = input("Введите сообщение для классификации (exit для выхода): ")
+    if user_message.lower() == 'exit':
+        break
+    label = classify_message(model, user_message, vectorizer, translator, encoder)
+    print(f'Сообщение классифицировано как: {label}')
     if user_message.lower() == 'exit':
         break
     label = classify_message(model, user_message, vectorizer, translator, encoder)
